@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="AttributeHelper.cs" />
     <Compile Include="AutoDapperRepository.cs" />
+    <Compile Include="AutoDapperSubRepository.cs" />
     <Compile Include="AutoQueryMaker.cs" />
     <Compile Include="DapperRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
