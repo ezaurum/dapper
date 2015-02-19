@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://opensource.org/licenses/MIT</licenseUrl>
+    <projectUrl>https://github.com/ezaurum/dapper</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <copyright>Copyright 2015, Ezaurum</copyright>
+    <tags>dapper</tags>
+    <dependencies>
+      <dependency  id="slf4net" version="0.1.32.1"/>
+      <dependency id="Dapper"  version="1.38"/>
+      <dependency id="Ezaurum.Commons" version="0.1.0.10"/>
+    </dependencies>
+    <frameworkAssemblies>
+            <frameworkAssembly assemblyName="System.Data.DataSetExtensions" />
+        </frameworkAssemblies>
+  </metadata>
+</package>

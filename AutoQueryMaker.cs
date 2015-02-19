@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
@@ -7,19 +6,6 @@ using System.Text;
 
 namespace Ezaurum.Dapper
 {
-    public static class AttributeHelper
-    {
-        public static bool HasAttribute(this PropertyInfo propertyInfo, Type type)
-        {
-            return true;
-        }
-
-        public static bool HasAttribute<T>(this PropertyInfo propertyInfo)
-        {
-            return HasAttribute(propertyInfo, typeof(T));
-        }
-    }
-
     public abstract class AutoQueryMaker<T, TK> : SqlQueryContainer
     {
         protected AutoQueryMaker(string tableName = null, string prefix = null, string suffix = null)
