@@ -7,7 +7,7 @@ using slf4net;
 
 namespace Ezaurum.Dapper
 {
-    //기본 게임 객체들
+    //기본 키가 long형인 게임 객체들
     public abstract class DapperRepository<T> : DapperRepository<T, long> where T : IIdentifiableToken
     {
         protected DapperRepository(string connectionString)
@@ -17,7 +17,7 @@ namespace Ezaurum.Dapper
     }
 
     //기본 키 형태가 long이 아닌 객체들
-    public abstract class DapperRepository<T, TK> : SqlQueryContainer, ICRUDRepository<T, TK>
+    public abstract class DapperRepository<T, TK> : ICRUDRepository<T, TK>
     {
         protected readonly SqlConnection DB;
 
@@ -58,21 +58,5 @@ namespace Ezaurum.Dapper
                 return false;
             }
         }
-    }
-
-    /// 혼자서는 안 쓰이는 애들
-    public abstract class DapperSubRepository<T, TK> : SqlQueryContainer, ICRUDTransactionalRepository<T, TK>
-    {
-        protected ILogger Logger;
-
-        protected DapperSubRepository()
-        {
-            Logger = LoggerFactory.GetLogger(GetType());
-        }
-
-        public abstract bool Create(T target, IDbTransaction tx);
-        public abstract bool Update(T target, IDbTransaction tx);
-        public abstract bool Delete(TK id, IDbTransaction tx);
-        public abstract T Read(TK id, IDbConnection connection);
     }
 }

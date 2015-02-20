@@ -76,32 +76,6 @@ namespace Ezaurum.Dapper
         public virtual bool Create(T target)
         {
             return 1 == DB.Execute(AutoInsertQuery, target);
-        }
-
-        //TODO
-        public interface IDbAction : IDisposable
-        {
-            IDbTransaction Tx { get; }
-            IDbConnection Connection { get; }
-
-            void Success();
-            void Fail();
-        }
-
-        //TODO
-        public IDbAction GetDbAction()
-        {
-            return null;
-        }
-
-        //TODO
-        public bool TestDelete()
-        {
-            using (var c = GetDbAction())
-            {
-
-                return true;
-            }
-        }
+        } 
     }
 }
