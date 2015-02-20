@@ -47,14 +47,20 @@ namespace Ezaurum.Dapper
                     return p.CanRead && p.CanWrite;
                 });
 
-            var sb = new StringBuilder();
+            var columnStringBuilder = new StringBuilder();
+            var updateValueStringBuilder = new StringBuilder();
             foreach (var property in propertyInfos)
             {
-                if (sb.Length > 1) sb.Append(SqlQuerySnippet.Comma);
-                sb.Append(property.Name);
+                if (columnStringBuilder.Length > 1)
+                {
+                    columnStringBuilder.Append(SqlQuerySnippet.Comma);
+                    updateValueStringBuilder.Append(SqlQuerySnippet.Comma);
+                }
+                updateValueStringBuilder.AppendFormat("{0}=@{0}", property.Name);
+                columnStringBuilder.Append(property.Name);
             }
 
-            ColumnSnippet = sb.ToString();
+            ColumnSnippet = columnStringBuilder.ToString();
             ValuesSnippet = SqlQuerySnippet.At +
                             ColumnSnippet.Replace(SqlQuerySnippet.Comma, SqlQuerySnippet.Comma + SqlQuerySnippet.At);
 
@@ -63,36 +69,36 @@ namespace Ezaurum.Dapper
 
             if (primaryKey.Count < 1) throw new InvalidOperationException("no primary key in " + type.Name);
 
-            var sb2 = new StringBuilder();
+            var keyStringBuilder = new StringBuilder();
             foreach (var keyInfo in primaryKey)
             {
                 var keyType = primaryKey.GetType();
                 if (keyType.IsPrimitive)
                 {
-                    if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
-                    sb2.Append(keyInfo.Name + "=" + SqlQuerySnippet.At + keyInfo.Name);
+                    if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                    keyStringBuilder.Append(keyInfo.Name + "=" + SqlQuerySnippet.At + keyInfo.Name);
                 }
                 else if (keyType.IsValueType)
                 {
                     foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
                     {
-                        if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
-                        sb2.Append(fieldInfo.Name + "=" + SqlQuerySnippet.At + fieldInfo.Name);
+                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                        keyStringBuilder.Append(fieldInfo.Name + "=" + SqlQuerySnippet.At + fieldInfo.Name);
                     }
                 }
                 else
                 {
                     foreach (var propertyInfo in keyType.GetProperties().Where(p => p.CanRead && p.CanWrite))
                     {
-                        if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
-                        sb2.Append(propertyInfo.Name + "=" + SqlQuerySnippet.At + propertyInfo.Name);
+                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                        keyStringBuilder.Append(propertyInfo.Name + "=" + SqlQuerySnippet.At + propertyInfo.Name);
                     }
                 }
             }
 
-            AutoSelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, AutoTableName, sb2);
-            AutoDeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, AutoTableName, sb2);
-            AutoUpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, AutoTableName, sb2);
+            AutoSelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, AutoTableName, keyStringBuilder);
+            AutoDeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, AutoTableName, keyStringBuilder);
+            AutoUpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, AutoTableName, updateValueStringBuilder, keyStringBuilder);
         }
 
         
