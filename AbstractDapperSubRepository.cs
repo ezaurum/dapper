@@ -5,11 +5,11 @@ using slf4net;
 namespace Ezaurum.Dapper
 {
     /// 혼자서는 안 쓰이는 애들
-    public abstract class DapperSubRepository<T, TK> : ICRUDTransactionalRepository<T, TK>
+    public abstract class AbstractDapperSubRepository<T, TK> : ICRUDTransactionalRepository<T, TK>
     {
         protected ILogger Logger;
 
-        protected DapperSubRepository()
+        protected AbstractDapperSubRepository()
         {
             Logger = LoggerFactory.GetLogger(GetType());
         }

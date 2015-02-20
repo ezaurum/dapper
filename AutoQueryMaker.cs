@@ -1,20 +1,22 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Linq.Mapping;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
 namespace Ezaurum.Dapper
 {
-    public abstract class AutoQueryMaker<T, TK>
+    public abstract class AutoQueryMaker<T>
     {
         protected AutoQueryMaker(string tableName = null, string prefix = null, string suffix = null)
         {
-            var type = typeof(T);
+            var type = typeof (T);
             if (type.IsPrimitive) return;
 
             //set table name
-            TableAttribute tableAttribute = type.GetCustomAttribute<TableAttribute>();
-            bool hasTable = null != tableAttribute;
+            var tableAttribute = type.GetCustomAttribute<TableAttribute>();
+            var hasTable = null != tableAttribute;
             if (null != tableName)
             {
                 AutoTableName = tableName;
@@ -27,11 +29,23 @@ namespace Ezaurum.Dapper
             {
                 AutoTableName = prefix + type.Name + suffix;
             }
-            
-            bool hasColumn = type.GetProperties().Any(p => p.HasAttribute(typeof(ColumnAttribute)));
-            var propertyInfos = hasColumn 
-                ? type.GetProperties().Where(p => p.CanRead && p.CanWrite && p.HasAttribute<ColumnAttribute>()) 
-                : type.GetProperties().Where(p => p.CanRead && p.CanWrite);
+
+            var primaryKey = new List<PropertyInfo>();
+            var properties = type.GetProperties();
+            var propertyInfos = properties.Where(
+                p =>
+                {
+                    var columnAttribute = p.GetCustomAttribute<ColumnAttribute>();
+
+                    if (null == columnAttribute) return false;
+
+                    if (columnAttribute.IsPrimaryKey)
+                    {
+                        primaryKey.Add(p);
+                    }
+
+                    return p.CanRead && p.CanWrite;
+                });
 
             var sb = new StringBuilder();
             foreach (var property in propertyInfos)
@@ -39,32 +53,62 @@ namespace Ezaurum.Dapper
                 if (sb.Length > 1) sb.Append(SqlQuerySnippet.Comma);
                 sb.Append(property.Name);
             }
-            
-            ColumnSnippet = sb.ToString();
-            ValuesSnippet = SqlQuerySnippet.At + ColumnSnippet.Replace(SqlQuerySnippet.Comma, SqlQuerySnippet.Comma+SqlQuerySnippet.At);
 
-            AutoInsertQuery = string.Format(SqlQuerySnippet.InsertFormat,AutoTableName, ColumnSnippet, ValuesSnippet);
+            ColumnSnippet = sb.ToString();
+            ValuesSnippet = SqlQuerySnippet.At +
+                            ColumnSnippet.Replace(SqlQuerySnippet.Comma, SqlQuerySnippet.Comma + SqlQuerySnippet.At);
+
+            AutoInsertQuery = string.Format(SqlQuerySnippet.InsertFormat, AutoTableName, ColumnSnippet, ValuesSnippet);
             AutoSelectQuery = SqlQuerySnippet.SelectAllSnippet + AutoTableName;
 
-            var keyType = typeof(TK);
-            if (keyType.IsPrimitive || !keyType.IsValueType) return;
+            if (primaryKey.Count < 1) throw new InvalidOperationException("no primary key in " + type.Name);
+
             var sb2 = new StringBuilder();
-            foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
+            foreach (var keyInfo in primaryKey)
             {
-                if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
-                sb2.Append(fieldInfo.Name + "=" + SqlQuerySnippet.At + fieldInfo.Name);
+                var keyType = primaryKey.GetType();
+                if (keyType.IsPrimitive)
+                {
+                    if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
+                    sb2.Append(keyInfo.Name + "=" + SqlQuerySnippet.At + keyInfo.Name);
+                }
+                else if (keyType.IsValueType)
+                {
+                    foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
+                    {
+                        if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
+                        sb2.Append(fieldInfo.Name + "=" + SqlQuerySnippet.At + fieldInfo.Name);
+                    }
+                }
+                else
+                {
+                    foreach (var propertyInfo in keyType.GetProperties().Where(p => p.CanRead && p.CanWrite))
+                    {
+                        if (sb2.Length > 1) sb2.Append(SqlQuerySnippet.Comma);
+                        sb2.Append(propertyInfo.Name + "=" + SqlQuerySnippet.At + propertyInfo.Name);
+                    }
+                }
             }
-            AutoSelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, AutoTableName,sb2);
+
+            AutoSelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, AutoTableName, sb2);
+            AutoDeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, AutoTableName, sb2);
+            AutoUpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, AutoTableName, sb2);
         }
 
+        
+
         #region auto generated query snippets 
+
         protected readonly string AutoInsertQuery;
-        protected readonly string AutoSelectByIDQuery;
         protected readonly string AutoSelectQuery;
+        protected readonly string AutoSelectByIDQuery;
+        protected readonly string AutoUpdateByIDQuery;
+        protected readonly string AutoDeleteByIDQuery;
+
         protected readonly string AutoTableName;
         protected readonly string ColumnSnippet;
         protected readonly string ValuesSnippet;
+
         #endregion
-       
     }
 }
