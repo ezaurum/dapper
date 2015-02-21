@@ -100,9 +100,9 @@ namespace Ezaurum.Dapper
             }
 
             PrimaryKeySnippet = keyStringBuilder.ToString();
-            SelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, TableName, keyStringBuilder);
-            DeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, TableName, keyStringBuilder);
-            UpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, TableName, ColumnsSetValues, keyStringBuilder);
+            SelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, TableName, PrimaryKeySnippet);
+            DeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, TableName, PrimaryKeySnippet);
+            UpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, TableName, ColumnsSetValues, PrimaryKeySnippet);
         }
 
         #region auto generated query snippets 
