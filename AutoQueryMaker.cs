@@ -75,7 +75,7 @@ namespace Ezaurum.Dapper
             var keyStringBuilder = new StringBuilder();
             foreach (var keyInfo in primaryKey)
             {
-                var keyType = primaryKey.GetType();
+                var keyType = keyInfo.PropertyType;
                 if (keyType.IsPrimitive)
                 {
                     if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.AndSnippet);
