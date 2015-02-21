@@ -19,15 +19,15 @@ namespace Ezaurum.Dapper
             var hasTable = null != tableAttribute;
             if (null != tableName)
             {
-                AutoTableName = tableName;
+                TableName = tableName;
             }
             else if (hasTable && null != tableAttribute.Name)
             {
-                AutoTableName = tableAttribute.Name;
+                TableName = tableAttribute.Name;
             }
             else
             {
-                AutoTableName = prefix + type.Name + suffix;
+                TableName = prefix + type.Name + suffix;
             }
 
             var primaryKey = new List<PropertyInfo>();
@@ -47,6 +47,7 @@ namespace Ezaurum.Dapper
                     return p.CanRead && p.CanWrite;
                 });
 
+            //generate snippets
             var columnStringBuilder = new StringBuilder();
             var updateValueStringBuilder = new StringBuilder();
             foreach (var property in propertyInfos)
@@ -59,14 +60,16 @@ namespace Ezaurum.Dapper
                 updateValueStringBuilder.AppendFormat("{0}=@{0}", property.Name);
                 columnStringBuilder.Append(property.Name);
             }
-
+            
+            ColumnsSetValues = updateValueStringBuilder.ToString();
             ColumnSnippet = columnStringBuilder.ToString();
             ValuesSnippet = SqlQuerySnippet.At +
                             ColumnSnippet.Replace(SqlQuerySnippet.Comma, SqlQuerySnippet.Comma + SqlQuerySnippet.At);
 
-            AutoInsertQuery = string.Format(SqlQuerySnippet.InsertFormat, AutoTableName, ColumnSnippet, ValuesSnippet);
-            AutoSelectQuery = SqlQuerySnippet.SelectAllSnippet + AutoTableName;
+            InsertQuery = string.Format(SqlQuerySnippet.InsertFormat, TableName, ColumnSnippet, ValuesSnippet);
+            SelectQuery = SqlQuerySnippet.SelectAllSnippet + TableName;
 
+            //generate primary key snippet
             if (primaryKey.Count < 1) throw new InvalidOperationException("no primary key in " + type.Name);
 
             var keyStringBuilder = new StringBuilder();
@@ -75,14 +78,14 @@ namespace Ezaurum.Dapper
                 var keyType = primaryKey.GetType();
                 if (keyType.IsPrimitive)
                 {
-                    if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                    if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.AndSnippet);
                     keyStringBuilder.Append(keyInfo.Name + "=" + SqlQuerySnippet.At + keyInfo.Name);
                 }
                 else if (keyType.IsValueType)
                 {
                     foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
                     {
-                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.AndSnippet);
                         keyStringBuilder.Append(fieldInfo.Name + "=" + SqlQuerySnippet.At + fieldInfo.Name);
                     }
                 }
@@ -90,30 +93,31 @@ namespace Ezaurum.Dapper
                 {
                     foreach (var propertyInfo in keyType.GetProperties().Where(p => p.CanRead && p.CanWrite))
                     {
-                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.Comma);
+                        if (keyStringBuilder.Length > 1) keyStringBuilder.Append(SqlQuerySnippet.AndSnippet);
                         keyStringBuilder.Append(propertyInfo.Name + "=" + SqlQuerySnippet.At + propertyInfo.Name);
                     }
                 }
             }
 
-            AutoSelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, AutoTableName, keyStringBuilder);
-            AutoDeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, AutoTableName, keyStringBuilder);
-            AutoUpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, AutoTableName, updateValueStringBuilder, keyStringBuilder);
+            PrimaryKeySnippet = keyStringBuilder.ToString();
+            SelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, TableName, keyStringBuilder);
+            DeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, TableName, keyStringBuilder);
+            UpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, TableName, ColumnsSetValues, keyStringBuilder);
         }
-
-        
 
         #region auto generated query snippets 
 
-        protected readonly string AutoInsertQuery;
-        protected readonly string AutoSelectQuery;
-        protected readonly string AutoSelectByIDQuery;
-        protected readonly string AutoUpdateByIDQuery;
-        protected readonly string AutoDeleteByIDQuery;
+        protected readonly string InsertQuery;
+        protected readonly string SelectQuery;
+        protected readonly string SelectByIDQuery;
+        protected readonly string UpdateByIDQuery;
+        protected readonly string DeleteByIDQuery;
 
-        protected readonly string AutoTableName;
+        protected readonly string TableName;
         protected readonly string ColumnSnippet;
         protected readonly string ValuesSnippet;
+        protected readonly string ColumnsSetValues;
+        protected readonly string PrimaryKeySnippet;
 
         #endregion
     }

@@ -26,7 +26,7 @@ namespace Ezaurum.Dapper
 
         public virtual bool Create(T target)
         {
-            return 1 == DB.Execute(AutoInsertQuery, target);
+            return 1 == DB.Execute(InsertQuery, target);
         }
 
         protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
@@ -58,29 +58,29 @@ namespace Ezaurum.Dapper
         {
             try
             {
-                return DB.Query<T>(AutoSelectQuery);
+                return DB.Query<T>(SelectQuery);
             }
             catch (Exception e1)
             {
-                Logger.Error(e1, "while auto data " + AutoTableName);
+                Logger.Error(e1, "while auto data " + TableName);
                 return null;
             }
         }
 
         public virtual bool Update(T target)
         {
-            return 1 == DB.Execute(AutoUpdateByIDQuery, target);
+            return 1 == DB.Execute(UpdateByIDQuery, target);
         }
 
         public IEnumerable<T> ReadAll(IDbConnection db)
         {
             try
             {
-                return db.Query<T>(AutoSelectQuery);
+                return db.Query<T>(SelectQuery);
             }
             catch (Exception e1)
             {
-                Logger.Error(e1, "while auto data " + AutoTableName);
+                Logger.Error(e1, "while auto data " + TableName);
                 return null;
             }
         }
@@ -92,18 +92,18 @@ namespace Ezaurum.Dapper
 
         public virtual bool Delete(TK id)
         {
-            return 0 < DB.Execute(AutoDeleteByIDQuery, id);
+            return 0 < DB.Execute(DeleteByIDQuery, id);
         }
 
         public virtual Dictionary<TK, T> ReadAll()
         {
             try
             {
-                return DB.Query<T>(AutoSelectQuery).ToDictionary(e => e.Key);
+                return DB.Query<T>(SelectQuery).ToDictionary(e => e.Key);
             }
             catch (Exception e1)
             {
-                Logger.Error(e1, "while auto data " + AutoTableName);
+                Logger.Error(e1, "while auto data " + TableName);
                 return null;
             }
         }
@@ -112,11 +112,11 @@ namespace Ezaurum.Dapper
         {
             try
             {
-                return DB.Query<T>(AutoSelectQuery).Where(filter).ToDictionary(e => e.Key);
+                return DB.Query<T>(SelectQuery).Where(filter).ToDictionary(e => e.Key);
             }
             catch (Exception e1)
             {
-                Logger.Error(e1, "while auto data " + AutoTableName);
+                Logger.Error(e1, "while auto data " + TableName);
                 return null;
             }
         } 
@@ -125,11 +125,11 @@ namespace Ezaurum.Dapper
         {
             try
             {
-                return DB.Query<T>(AutoSelectByIDQuery, id).FirstOrDefault();
+                return DB.Query<T>(SelectByIDQuery, id).FirstOrDefault();
             }
             catch (Exception e1)
             {
-                Logger.Error(e1, "while auto data " + AutoTableName);
+                Logger.Error(e1, "while auto data " + TableName);
                 return default(T);
             }
         }
