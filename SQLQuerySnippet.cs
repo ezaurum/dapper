@@ -28,5 +28,7 @@ namespace Ezaurum.Dapper
 
         /// Delete query default format. tablename, conditions
         public const string DeleteFormat = DeleteSnippet + "{0}" + WhereSnippet + "{1}";
+
+        public const string ValueMatchFormat = "{0}=@{1}";
     }
 }

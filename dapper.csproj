@@ -51,7 +51,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AttributeHelper.cs" />
     <Compile Include="DapperRepository.cs" />
     <Compile Include="AutoQueryMaker.cs" />
     <Compile Include="AbstractDapperRepository.cs" />
