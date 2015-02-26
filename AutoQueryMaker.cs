@@ -83,7 +83,7 @@ namespace Ezaurum.Dapper
             string delimeter = SqlQuerySnippet.Comma)
         {
             var keyType = property.PropertyType;
-            if (keyType.IsPrimitive)
+            if (keyType.IsPrimitive || keyType == typeof(string) || keyType == typeof(DateTime)|| keyType.IsEnum)
             {
                 AppendSingleColumn(property, stringBuilder, format, delimeter);
             }
