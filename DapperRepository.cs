@@ -53,7 +53,7 @@ namespace Ezaurum.Dapper
 
         public virtual bool Create(IEnumerable<T> targets)
         {
-            return ExecuteTransaction(tx => targets.Any(target => !Create(target, tx)));
+            return ExecuteTransaction(tx => targets.All(target => Create(target, tx)));
         }
 
         #endregion
@@ -64,7 +64,7 @@ namespace Ezaurum.Dapper
         {
             try
             {
-                return DB.Query<T>(SelectByIDQuery, id).FirstOrDefault();
+                return DB.Query<T>(SelectByIDQuery, new{ ID=id}).FirstOrDefault();
             }
             catch (Exception e1)
             {
@@ -97,7 +97,7 @@ namespace Ezaurum.Dapper
 
         public virtual bool Update(IEnumerable<T> targets)
         {
-            return ExecuteTransaction(tx => targets.Any(target => !Update(target, tx)));
+            return ExecuteTransaction(tx => targets.All(target => Update(target, tx)));
         }
 
         public virtual bool Update(T target, IDbTransaction tx)
@@ -121,12 +121,12 @@ namespace Ezaurum.Dapper
 
         public virtual bool Delete(IEnumerable<T> targets)
         {
-            return ExecuteTransaction(tx => targets.Any(target => !Delete(target, tx)));
+            return ExecuteTransaction(tx => targets.All(target => Delete(target, tx)));
         }
 
         public virtual bool Delete(IEnumerable<TK> itemIDs)
         {
-            return ExecuteTransaction(tx => itemIDs.Any(target => !Delete(target, tx)));
+            return ExecuteTransaction(tx => itemIDs.All(target => Delete(target, tx)));
         }
 
         public bool Delete(TK id)
