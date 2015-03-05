@@ -10,7 +10,7 @@ using slf4net;
 
 namespace Ezaurum.Dapper
 {
-    public class DapperRepository<T>
+    public class DapperRepository<T, TK> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>
     {
         protected readonly SqlConnection DB;
         protected ILogger Logger;
@@ -28,9 +28,9 @@ namespace Ezaurum.Dapper
             TableName = AutoQueryMaker.GetTableName(tableName, prefix, suffix, type);
 
             //generate snippets
-            AutoQueryMaker.GenerateSnippets(type, 
-                out ColumnSnippet, out ValuesSnippet, out ColumnsSetValues, 
-                out PrimaryKeySnippet); 
+            AutoQueryMaker.GenerateSnippets(type,
+                out ColumnSnippet, out ValuesSnippet, out ColumnsSetValues,
+                out PrimaryKeySnippet);
 
             InsertQuery = string.Format(SqlQuerySnippet.InsertFormat, TableName, ColumnSnippet, ValuesSnippet);
             SelectQuery = SqlQuerySnippet.SelectAllSnippet + TableName;
@@ -39,11 +39,108 @@ namespace Ezaurum.Dapper
             UpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, TableName, ColumnsSetValues, PrimaryKeySnippet);
         }
 
+        #region CREATE
+
+        public virtual bool Create(T target, IDbTransaction tx)
+        {
+            return 1 == tx.Connection.Execute(InsertQuery, target, tx);
+        }
+
         public virtual bool Create(T target)
         {
             return 1 == DB.Execute(InsertQuery, target);
         }
 
+        public virtual bool Create(IEnumerable<T> targets)
+        {
+            return ExecuteTransaction(tx => targets.Any(target => !Create(target, tx)));
+        }
+
+        #endregion
+
+        #region READ
+
+        public T Read(TK id)
+        {
+            try
+            {
+                return DB.Query<T>(SelectByIDQuery, id).FirstOrDefault();
+            }
+            catch (Exception e1)
+            {
+                Logger.Error(e1, "while auto data " + TableName);
+                return default(T);
+            }
+        }
+
+        public virtual IEnumerable<T> ReadAllList()
+        {
+            return ReadAll(DB);
+        }
+
+        public IEnumerable<T> ReadAll(IDbConnection db)
+        {
+            try
+            {
+                return db.Query<T>(SelectQuery);
+            }
+            catch (Exception e1)
+            {
+                Logger.Error(e1, "while auto data " + TableName);
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region UPDATE
+
+        public virtual bool Update(IEnumerable<T> targets)
+        {
+            return ExecuteTransaction(tx => targets.Any(target => !Update(target, tx)));
+        }
+
+        public virtual bool Update(T target, IDbTransaction tx)
+        {
+            return 1 == tx.Connection.Execute(UpdateByIDQuery, target, tx);
+        }
+
+        public virtual bool Update(T target)
+        {
+            return 1 == DB.Execute(UpdateByIDQuery, target);
+        }
+
+        #endregion
+        
+        #region DELETE
+
+        public bool Delete(TK id, IDbTransaction tx)
+        {
+            return 1 == tx.Connection.Execute(DeleteByIDQuery, id, tx);
+        }
+
+        public virtual bool Delete(IEnumerable<T> targets)
+        {
+            return ExecuteTransaction(tx => targets.Any(target => !Delete(target, tx)));
+        }
+
+        public virtual bool Delete(IEnumerable<TK> itemIDs)
+        {
+            return ExecuteTransaction(tx => itemIDs.Any(target => !Delete(target, tx)));
+        }
+
+        public bool Delete(TK id)
+        {
+            return 0 < DB.Execute(DeleteByIDQuery, new {ID=id});
+        }
+
+        private bool Delete(T target, IDbTransaction tx)
+        {
+            return 0 < tx.Connection.Execute(DeleteByIDQuery, target, tx);
+        }
+
+        #endregion
+        
         protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
         {
             try
@@ -69,37 +166,6 @@ namespace Ezaurum.Dapper
             }
         }
 
-        public virtual IEnumerable<T> ReadAllList()
-        {
-            try
-            {
-                return DB.Query<T>(SelectQuery);
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return null;
-            }
-        }
-
-        public virtual bool Update(T target)
-        {
-            return 1 == DB.Execute(UpdateByIDQuery, target);
-        }
-
-        public IEnumerable<T> ReadAll(IDbConnection db)
-        {
-            try
-            {
-                return db.Query<T>(SelectQuery);
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return null;
-            }
-        }
-
         #region auto generated query snippets
 
         protected readonly string InsertQuery;
@@ -117,16 +183,11 @@ namespace Ezaurum.Dapper
         #endregion
     }
 
-    public class DapperRepository<T, TK> : DapperRepository<T> where T : IHasCompoundKey<TK>
+    public class DapperCompoundRepository<T, TK> : DapperRepository<T, TK> where T : IHasCompoundKey<TK>
     {
-        public DapperRepository(string connectionString, string tableName = null, string prefix = null,
+        public DapperCompoundRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null) : base(connectionString, tableName, prefix, suffix)
         {
-        }
-
-        public virtual bool Delete(TK id)
-        {
-            return 0 < DB.Execute(DeleteByIDQuery, id);
         }
 
         public virtual Dictionary<TK, T> ReadAll()
@@ -152,19 +213,6 @@ namespace Ezaurum.Dapper
             {
                 Logger.Error(e1, "while auto data " + TableName);
                 return null;
-            }
-        }
-
-        public virtual T Read(TK id)
-        {
-            try
-            {
-                return DB.Query<T>(SelectByIDQuery, id).FirstOrDefault();
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return default(T);
             }
         }
     }

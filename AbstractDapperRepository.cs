@@ -8,7 +8,7 @@ using slf4net;
 namespace Ezaurum.Dapper
 {
     //기본 키가 long형인 게임 객체들
-    public abstract class AbstractDapperRepository<T> : AbstractDapperRepository<T, long> where T : IIdentifiableToken
+    public abstract class AbstractDapperRepository<T> : AbstractDapperRepository<T, long> where T : IIdentifiableToken<long>
     {
         protected AbstractDapperRepository(string connectionString)
             : base(connectionString)
