@@ -9,7 +9,14 @@ namespace Ezaurum.Dapper
 {
     public static class AutoQueryMaker
     {
-        public static string GetTableName(string tableName, 
+        private static readonly Type[] SingleColumnTypes =
+        {
+            typeof (string),
+            typeof (DateTime),
+            typeof (byte[])
+        };
+
+        public static string GetTableName(string tableName,
             string prefix, string suffix, Type type)
         {
             var tableAttribute = type.GetCustomAttribute<TableAttribute>();
@@ -53,7 +60,7 @@ namespace Ezaurum.Dapper
                     AppendPropertyColumns(property, updateValueStringBuilder,
                         SqlQuerySnippet.ValueMatchFormat);
                 }
-                
+
                 AppendPropertyColumns(property, insertColumnsBuilder, "{0}");
                 AppendPropertyColumns(property, insertValuesBuilder, "@{1}");
             }
@@ -78,12 +85,12 @@ namespace Ezaurum.Dapper
             primaryKeySnippet = keyStringBuilder.ToString();
         }
 
-        private static void AppendPropertyColumns(PropertyInfo property, 
-            StringBuilder stringBuilder, string format, 
+        private static void AppendPropertyColumns(PropertyInfo property,
+            StringBuilder stringBuilder, string format,
             string delimeter = SqlQuerySnippet.Comma)
         {
             var keyType = property.PropertyType;
-            if (keyType.IsPrimitive || keyType == typeof(string) || keyType == typeof(DateTime)|| keyType.IsEnum)
+            if (keyType.IsPrimitive || keyType.IsEnum || SingleColumnTypes.Contains(keyType))
             {
                 AppendSingleColumn(property, stringBuilder, format, delimeter);
             }
