@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Dapper;
 using Ezaurum.Commons;
 using slf4net;
@@ -18,25 +19,20 @@ namespace Ezaurum.Dapper
         public DapperRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null)
         {
+            if (typeof(T).IsPrimitive) return;
+
             DB = new SqlConnection(ConfigurationManager.ConnectionStrings[connectionString].ConnectionString);
             Logger = LoggerFactory.GetLogger(GetType());
 
-            var type = typeof (T);
-            if (type.IsPrimitive) return;
+            //set table name 
+            AutoQueryMaker.GenerateQueries(typeof (T), tableName, prefix, suffix, out TableName, 
+                out InsertQuery, out SelectQuery, out SelectByIDQuery, out DeleteByIDQuery, out UpdateByIDQuery); 
 
-            //set table name
-            TableName = AutoQueryMaker.GetTableName(tableName, prefix, suffix, type);
-
-            //generate snippets
-            AutoQueryMaker.GenerateSnippets(type,
-                out ColumnSnippet, out ValuesSnippet, out ColumnsSetValues,
-                out PrimaryKeySnippet);
-
-            InsertQuery = string.Format(SqlQuerySnippet.InsertFormat, TableName, ColumnSnippet, ValuesSnippet);
-            SelectQuery = SqlQuerySnippet.SelectAllSnippet + TableName;
-            SelectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, TableName, PrimaryKeySnippet);
-            DeleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, TableName, PrimaryKeySnippet);
-            UpdateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, TableName, ColumnsSetValues, PrimaryKeySnippet);
+            Logger.Info(InsertQuery);
+            Logger.Info(SelectQuery);
+            Logger.Info(SelectByIDQuery);
+            Logger.Info(DeleteByIDQuery);
+            Logger.Info(UpdateByIDQuery);
         }
 
         #region CREATE
@@ -64,7 +60,7 @@ namespace Ezaurum.Dapper
         {
             try
             {
-                return DB.Query<T>(SelectByIDQuery, new{ ID=id}).FirstOrDefault();
+                return DB.Query<T>(SelectByIDQuery, new {PK_ID = id}).FirstOrDefault();
             }
             catch (Exception e1)
             {
@@ -174,12 +170,7 @@ namespace Ezaurum.Dapper
         protected readonly string UpdateByIDQuery;
         protected readonly string DeleteByIDQuery;
 
-        protected readonly string TableName;
-        protected readonly string ColumnSnippet;
-        protected readonly string ValuesSnippet;
-        protected readonly string ColumnsSetValues;
-        protected readonly string PrimaryKeySnippet;
-
+        protected readonly string TableName; 
         #endregion
     }
 

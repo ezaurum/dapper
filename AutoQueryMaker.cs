@@ -4,41 +4,95 @@ using System.Data.Linq.Mapping;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using slf4net;
 
 namespace Ezaurum.Dapper
 {
     public static class AutoQueryMaker
     {
+        private static readonly ILogger Logger = LoggerFactory.GetLogger(typeof(AutoQueryMaker));
+
         private static readonly Type[] SingleColumnTypes =
         {
             typeof (string),
             typeof (DateTime),
             typeof (byte[])
-        };
+        }; 
 
-        public static string GetTableName(string tableName,
-            string prefix, string suffix, Type type)
+        private static void AppendPropertyColumns(PropertyInfo property, StringBuilder stringBuilder, string format, string delimeter = SqlQuerySnippet.Comma)
         {
-            var tableAttribute = type.GetCustomAttribute<TableAttribute>();
-            var hasTable = null != tableAttribute;
-            if (null != tableName)
+            var keyType = property.PropertyType;
+            if (keyType.IsPrimitive || keyType.IsEnum || SingleColumnTypes.Contains(keyType))
             {
-                return tableName;
+                AppendSingleColumn(property, stringBuilder, format, delimeter);
             }
-
-            if (hasTable && null != tableAttribute.Name)
+            else if (keyType.IsValueType)
             {
-                return tableAttribute.Name;
+                foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
+                {
+                    AppendSingleColumn(fieldInfo, stringBuilder, format, delimeter);
+                }
             }
-
-            return prefix + type.Name + suffix;
+            else
+            {
+                foreach (var propertyInfo in keyType.GetProperties())
+                {
+                    AppendSingleColumn(propertyInfo, stringBuilder, format, delimeter);
+                }
+            }
         }
 
-        public static void GenerateSnippets(Type type, out string columnSnippet,
-            out string valuesSnippet,
-            out string updateSnippet,
-            out string primaryKeySnippet)
+        /// <summary>
+        /// Append Single Column to StringBuilder by format
+        /// </summary>
+        /// <param name="memberInfo"></param>
+        /// <param name="stringBuilder"></param>
+        /// <param name="format"></param>
+        /// <param name="delimeter"></param>
+        /// <param name="scalarName"></param>
+        private static void AppendSingleColumn(MemberInfo memberInfo,
+            StringBuilder stringBuilder, string format, string delimeter, string scalarName = null)
         {
+            var columnAttribute = memberInfo.GetCustomAttribute<ColumnAttribute>();
+            if (null == columnAttribute) return;
+            if (stringBuilder.Length > 1) stringBuilder.Append(delimeter);
+            
+            if (null == scalarName)
+            {
+                scalarName = memberInfo.Name;
+            }
+
+            var name = string.IsNullOrWhiteSpace(columnAttribute.Name)
+                    ? memberInfo.Name
+                    : columnAttribute.Name;
+
+            stringBuilder.AppendFormat(format, name, scalarName);
+        }
+
+        public static void GenerateQueries(Type type, string preparedTableName, string prefix, string suffix, out string tableName,
+            out string insertQuery, out string selectQuery, out string selectByIDQuery, out string deleteByIDQuery, out string updateByIDQuery)
+        {
+            
+            if (null != preparedTableName)
+            {
+                tableName = preparedTableName;
+            }
+            else
+            {
+                TableAttribute tableAttribute = type.GetCustomAttribute<TableAttribute>();
+                bool hasTable = null != tableAttribute;
+                if (hasTable && null != tableAttribute.Name)
+                {
+                    tableName = tableAttribute.Name;
+                }
+                else
+                {
+                    tableName = prefix + type.Name + suffix;
+                    Logger.Info("GetTableName:" + tableName);
+                }
+            }
+
             var primaryKey = new List<PropertyInfo>();
             var insertColumnsBuilder = new StringBuilder();
             var updateValueStringBuilder = new StringBuilder();
@@ -69,10 +123,10 @@ namespace Ezaurum.Dapper
             if (primaryKey.Count < 1)
                 throw new InvalidOperationException("no primary key in " + type.Name);
 
-            columnSnippet = insertColumnsBuilder.ToString();
-            valuesSnippet = insertValuesBuilder.ToString();
+            var columnSnippet = insertColumnsBuilder.ToString();
+            var valuesSnippet = insertValuesBuilder.ToString();
 
-            updateSnippet = updateValueStringBuilder.ToString();
+            var columnsSetValues = updateValueStringBuilder.ToString();
 
             //generate key string
             var keyStringBuilder = new StringBuilder();
@@ -82,44 +136,14 @@ namespace Ezaurum.Dapper
                     SqlQuerySnippet.ValueMatchFormat,
                     SqlQuerySnippet.AndSnippet);
             }
-            primaryKeySnippet = keyStringBuilder.ToString();
-        }
+            var primaryKeySnippet = keyStringBuilder.ToString();
 
-        private static void AppendPropertyColumns(PropertyInfo property,
-            StringBuilder stringBuilder, string format,
-            string delimeter = SqlQuerySnippet.Comma)
-        {
-            var keyType = property.PropertyType;
-            if (keyType.IsPrimitive || keyType.IsEnum || SingleColumnTypes.Contains(keyType))
-            {
-                AppendSingleColumn(property, stringBuilder, format, delimeter);
-            }
-            else if (keyType.IsValueType)
-            {
-                foreach (var fieldInfo in keyType.GetFields().Where(p => p.IsPublic))
-                {
-                    AppendSingleColumn(fieldInfo, stringBuilder, format, delimeter);
-                }
-            }
-            else
-            {
-                foreach (var propertyInfo in keyType.GetProperties())
-                {
-                    AppendSingleColumn(propertyInfo, stringBuilder, format, delimeter);
-                }
-            }
-        }
-
-        private static void AppendSingleColumn(MemberInfo memberInfo,
-            StringBuilder stringBuilder, string format, string delimeter)
-        {
-            var columnAttribute = memberInfo.GetCustomAttribute<ColumnAttribute>();
-            if (null == columnAttribute) return;
-            if (stringBuilder.Length > 1) stringBuilder.Append(delimeter);
-            var name = string.IsNullOrWhiteSpace(columnAttribute.Name)
-                ? memberInfo.Name
-                : columnAttribute.Name;
-            stringBuilder.AppendFormat(format, name, memberInfo.Name);
+            insertQuery = string.Format(SqlQuerySnippet.InsertFormat, tableName, columnSnippet, valuesSnippet);
+            selectQuery = SqlQuerySnippet.SelectAllSnippet + tableName;
+            var replace = new Regex("@([^ ]*)").Replace(primaryKeySnippet, "@PK_ID");
+            selectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, tableName, replace);
+            deleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, primaryKeySnippet);
+            updateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, tableName, columnsSetValues, primaryKeySnippet);
         }
     }
 }
