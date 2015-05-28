@@ -71,7 +71,7 @@ namespace Ezaurum.Dapper
         }
 
         public static void GenerateQueries(Type type, string preparedTableName, string prefix, string suffix, out string tableName,
-            out string insertQuery, out string selectQuery, out string selectByIDQuery, out string deleteByIDQuery, out string updateByIDQuery)
+            out string insertQuery, out string selectQuery, out string selectByIDQuery, out string deleteByIDQuery, out string updateByIDQuery, out string selectByForeignKey)
         {
             
             if (null != preparedTableName)
@@ -94,6 +94,7 @@ namespace Ezaurum.Dapper
             }
 
             var primaryKey = new List<PropertyInfo>();
+            var foreignKey = new List<PropertyInfo>();
             var insertColumnsBuilder = new StringBuilder();
             var updateValueStringBuilder = new StringBuilder();
             var insertValuesBuilder = new StringBuilder();
@@ -102,8 +103,18 @@ namespace Ezaurum.Dapper
             {
                 var columnAttribute
                     = property.GetCustomAttribute<ColumnAttribute>();
+                var associationAttribute
+                  = property.GetCustomAttribute<AssociationAttribute>();
+
                 if (null == columnAttribute) continue;
-                if (columnAttribute.IsDbGenerated) continue;
+
+                if (null != associationAttribute)
+                {
+                    if (associationAttribute.IsForeignKey)
+                    {
+                        foreignKey.Add(property);
+                    }
+                }
 
                 if (columnAttribute.IsPrimaryKey)
                 {
@@ -114,6 +125,8 @@ namespace Ezaurum.Dapper
                     AppendPropertyColumns(property, updateValueStringBuilder,
                         SqlQuerySnippet.ValueMatchFormat);
                 }
+
+                if (columnAttribute.IsDbGenerated) continue;
 
                 AppendPropertyColumns(property, insertColumnsBuilder, "{0}");
                 AppendPropertyColumns(property, insertValuesBuilder, "@{1}");
@@ -138,12 +151,23 @@ namespace Ezaurum.Dapper
             }
             var primaryKeySnippet = keyStringBuilder.ToString();
 
+            var fkeyStringBuilder = new StringBuilder();
+            foreach (var keyInfo in foreignKey)
+            {
+                AppendPropertyColumns(keyInfo, fkeyStringBuilder,
+                    SqlQuerySnippet.ValueMatchFormat,
+                    SqlQuerySnippet.AndSnippet);
+            }
+            var foreignKeySnippet = fkeyStringBuilder.ToString();
+
             insertQuery = string.Format(SqlQuerySnippet.InsertFormat, tableName, columnSnippet, valuesSnippet);
             selectQuery = SqlQuerySnippet.SelectAllSnippet + tableName;
             var replace = new Regex("@([^ ]*)").Replace(primaryKeySnippet, "@PK_ID");
             selectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, tableName, replace);
             deleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, primaryKeySnippet);
             updateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, tableName, columnsSetValues, primaryKeySnippet);
+            var replaceFK = new Regex("@([^ ]*)").Replace(foreignKeySnippet, "@FK_ID");
+            selectByForeignKey = string.Format(SqlQuerySnippet.SelectFormat, tableName, replaceFK);
         }
     }
 }

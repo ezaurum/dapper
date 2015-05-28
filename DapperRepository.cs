@@ -4,14 +4,28 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Dapper;
 using Ezaurum.Commons;
 using slf4net;
 
 namespace Ezaurum.Dapper
 {
-    public class DapperRepository<T, TK> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>
+    public class DapperRepository<T> : DapperRepository<T, long, long>
+    {
+        public DapperRepository(string connectionString)
+            : base(connectionString)
+        {
+        }
+    }
+
+    public class DapperRepository<T, TK> : DapperRepository<T, TK, TK>
+    {
+        public DapperRepository(string connectionString, string tableName = null, string prefix = null, string suffix = null) : base(connectionString, tableName, prefix, suffix)
+        {
+        }
+    }
+
+    public class DapperRepository<T, TK, TFk> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>, IForeignKeyRepository<T, TFk>
     {
         protected readonly SqlConnection DB;
         protected ILogger Logger;
@@ -26,7 +40,7 @@ namespace Ezaurum.Dapper
 
             //set table name 
             AutoQueryMaker.GenerateQueries(typeof (T), tableName, prefix, suffix, out TableName, 
-                out InsertQuery, out SelectQuery, out SelectByIDQuery, out DeleteByIDQuery, out UpdateByIDQuery); 
+                out InsertQuery, out SelectQuery, out SelectByIDQuery, out DeleteByIDQuery, out UpdateByIDQuery, out SelectByForeignKeyQuery); 
 
             Logger.Info(InsertQuery);
             Logger.Info(SelectQuery);
@@ -55,6 +69,19 @@ namespace Ezaurum.Dapper
         #endregion
 
         #region READ
+
+        public IEnumerable<T> ReadByForeignKey(TFk id)
+        {
+            try
+            {
+                return DB.Query<T>(SelectByForeignKeyQuery, new { FK_ID = id });
+            }
+            catch (Exception e1)
+            {
+                Logger.Error(e1, "while auto data " + TableName);
+                return null;
+            }
+        }
 
         public T Read(TK id)
         {
@@ -167,6 +194,7 @@ namespace Ezaurum.Dapper
         protected readonly string InsertQuery;
         protected readonly string SelectQuery;
         protected readonly string SelectByIDQuery;
+        protected readonly string SelectByForeignKeyQuery;
         protected readonly string UpdateByIDQuery;
         protected readonly string DeleteByIDQuery;
 

@@ -36,9 +36,9 @@
       <HintPath>packages\Dapper.1.42\lib\net45\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ezaurum.Commons, Version=0.1.0.11, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Ezaurum.Commons, Version=0.1.0.13, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Ezaurum.Commons.0.1.0.11\lib\net35\Ezaurum.Commons.dll</HintPath>
+      <HintPath>packages\Ezaurum.Commons.0.1.0.13\lib\net35\Ezaurum.Commons.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Build.Framework" />
     <Reference Include="slf4net">
@@ -76,7 +76,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
