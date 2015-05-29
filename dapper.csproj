@@ -36,9 +36,9 @@
       <HintPath>packages\Dapper.1.42\lib\net45\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ezaurum.Commons, Version=0.1.0.13, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Ezaurum.Commons.0.1.0.13\lib\net35\Ezaurum.Commons.dll</HintPath>
+    <Reference Include="Ezaurum.Commons, Version=0.1.0.14, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Ezaurum.Commons.0.1.0.14\lib\net35\Ezaurum.Commons.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Build.Framework" />
     <Reference Include="slf4net">
@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DapperGameRepository.cs" />
     <Compile Include="DapperRepository.cs" />
     <Compile Include="AutoQueryMaker.cs" />
     <Compile Include="AbstractDapperRepository.cs" />

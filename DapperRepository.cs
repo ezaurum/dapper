@@ -9,11 +9,11 @@ using Ezaurum.Commons;
 using slf4net;
 
 namespace Ezaurum.Dapper
-{
+{ 
     public class DapperRepository<T> : DapperRepository<T, long, long>
     {
-        public DapperRepository(string connectionString)
-            : base(connectionString)
+        public DapperRepository(string connectionString, string tableName = null, string prefix = null, string suffix = null)
+            : base(connectionString, tableName, prefix, suffix)
         {
         }
     }
