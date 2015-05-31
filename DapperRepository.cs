@@ -25,7 +25,7 @@ namespace Ezaurum.Dapper
         }
     }
 
-    public class DapperRepository<T, TK, TFk> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>, IForeignKeyRepository<T, TFk>
+    public class DapperRepository<T, TK, TFk> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>, IForeignKeyRepository<T, TFk>, ICRUDRepository<T, TK>
     {
         protected readonly SqlConnection DB;
         protected ILogger Logger;
