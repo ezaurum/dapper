@@ -4,11 +4,11 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using Dapper;
+using System.Reflection;
 using Ezaurum.Commons;
 using slf4net;
 
-namespace Ezaurum.Dapper
+namespace Dapper.Repository
 { 
     public class DapperRepository<T> : DapperRepository<T, long, long>
     {
@@ -25,7 +25,7 @@ namespace Ezaurum.Dapper
         }
     }
 
-    public class DapperRepository<T, TK, TFk> : IEnumerableRepository<T, TK>, ICRUDTransactionalRepository<T, TK>, IForeignKeyRepository<T, TFk>, ICRUDRepository<T, TK>
+    public class DapperRepository<T, TK, TFk> : IEnumerableRepository<T, TK>, ITransactionalRepository<T, TK>, IForeignKeyRepository<T, TFk>, ICRUDRepository<T, TK>
     {
         protected readonly SqlConnection DB;
         protected ILogger Logger;

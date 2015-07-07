@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using slf4net;
 
-namespace Ezaurum.Dapper
+namespace Dapper.Repository
 {
     public static class AutoQueryMaker
     {

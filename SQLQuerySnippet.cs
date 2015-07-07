@@ -1,5 +1,9 @@
-namespace Ezaurum.Dapper
+namespace Dapper.Repository
 {
+    /// <summary>
+    /// Sql Äõ¸® Á¶°¢µé
+    /// Sql query snippets
+    /// </summary>
     public static class SqlQuerySnippet
     {
         public const string SelectAllSnippet = "SELECT * FROM ";

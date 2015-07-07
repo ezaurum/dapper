@@ -7,8 +7,8 @@
     <ProjectGuid>{1562EFAD-00D6-492A-A28D-BAF5C2C26FBD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Ezaurum.Dapper</RootNamespace>
-    <AssemblyName>Ezaurum.Dapper</AssemblyName>
+    <RootNamespace>Dapper.Repository</RootNamespace>
+    <AssemblyName>Dapper.Respository</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">.\</SolutionDir>
