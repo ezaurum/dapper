@@ -1,12 +1,13 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Resources;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("dapper extention")]
-[assembly: AssemblyDescription("dapper auto generated repository extension")]
+[assembly: AssemblyTitle("Dapper Repository")]
+[assembly: AssemblyDescription("Dapper auto generated repository extension")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ezaurum")]
 [assembly: AssemblyProduct("dapper extention")]
@@ -32,5 +33,6 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.0.1.18")]
-[assembly: AssemblyFileVersion("0.0.1.18")]
+[assembly: AssemblyVersion("0.0.1.19")]
+[assembly: AssemblyFileVersion("0.0.1.19")]
+[assembly: NeutralResourcesLanguageAttribute("ko-KR")]

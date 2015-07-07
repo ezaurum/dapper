@@ -70,10 +70,18 @@ namespace Dapper.Repository
             stringBuilder.AppendFormat(format, name, scalarName);
         }
 
-        public static void GenerateQueries(Type type, string preparedTableName, string prefix, string suffix, out string tableName,
-            out string insertQuery, out string selectQuery, out string selectByIDQuery, out string deleteByIDQuery, out string updateByIDQuery, out string selectByForeignKey)
+        /// <summary>
+        /// 클래스 구조에서 쿼리 만들기
+        /// Generate class with reflection
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="queries"></param>
+        /// <param name="preparedTableName"></param>
+        /// <param name="prefix"></param>
+        /// <param name="suffix"></param> 
+        public static void GenerateQueries(Type type, out Dictionary<byte, string> queries, string preparedTableName = null, string prefix = null, string suffix = null)
         {
-            
+            string tableName;
             if (null != preparedTableName)
             {
                 tableName = preparedTableName;
@@ -160,14 +168,53 @@ namespace Dapper.Repository
             }
             var foreignKeySnippet = fkeyStringBuilder.ToString();
 
-            insertQuery = string.Format(SqlQuerySnippet.InsertFormat, tableName, columnSnippet, valuesSnippet);
-            selectQuery = SqlQuerySnippet.SelectAllSnippet + tableName;
-            var replace = new Regex("@([^ ]*)").Replace(primaryKeySnippet, "@PK_ID");
-            selectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, tableName, replace);
-            deleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, primaryKeySnippet);
-            updateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, tableName, columnsSetValues, primaryKeySnippet);
-            var replaceFK = new Regex("@([^ ]*)").Replace(foreignKeySnippet, "@FK_ID");
-            selectByForeignKey = string.Format(SqlQuerySnippet.SelectFormat, tableName, replaceFK);
+            var insertQuery = string.Format(SqlQuerySnippet.InsertFormat, tableName, columnSnippet, valuesSnippet);
+            var selectQuery = SqlQuerySnippet.SelectAllSnippet + tableName;
+
+            string selectByIDQuery;
+            string selectByForeignKey;
+            
+            string deleteQuery;
+            string deleteByIDQuery;
+            
+            if (primaryKey.Count < 2)
+            {
+                var replace = new Regex("@([^ ]*)").Replace(primaryKeySnippet, "@PK_ID", 1);
+                selectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, tableName, replace);
+                deleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, replace);
+                deleteQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, "{0}");
+            }
+            else
+            {
+                selectByIDQuery = string.Format(SqlQuerySnippet.SelectFormat, tableName, primaryKeySnippet);
+                deleteByIDQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, primaryKeySnippet);
+                deleteQuery = string.Format(SqlQuerySnippet.DeleteFormat, tableName, "{0}");
+            }
+            var updateByIDQuery = string.Format(SqlQuerySnippet.UpdateFormat, tableName, columnsSetValues, primaryKeySnippet);
+            string updateQuery = string.Format(SqlQuerySnippet.UpdateFormat, tableName, columnsSetValues, "{0}");
+
+            if (foreignKey.Count < 2)
+            {
+                var replaceFK = new Regex("@([^ ]*)").Replace(foreignKeySnippet, "@FK_ID");
+                selectByForeignKey = string.Format(SqlQuerySnippet.SelectFormat, tableName, replaceFK);
+            }
+            else
+            {
+                selectByForeignKey = string.Format(SqlQuerySnippet.SelectFormat, tableName, foreignKeySnippet);
+            }
+
+            queries = new Dictionary<byte, string>
+            {
+                { SqlQuerySnippet.TableNameIndex, tableName},
+                { SqlQuerySnippet.InsertIndex, insertQuery},
+                { SqlQuerySnippet.SelectIndex, selectQuery},
+                { SqlQuerySnippet.SelectPKIndex, selectByIDQuery},
+                { SqlQuerySnippet.SelectFKIndex, selectByForeignKey},
+                { SqlQuerySnippet.UpdateIndex, updateQuery},
+                { SqlQuerySnippet.UpdatePKIndex, updateByIDQuery},
+                { SqlQuerySnippet.DeleteIndex, deleteQuery},
+                { SqlQuerySnippet.DeletePKIndex, deleteByIDQuery},
+            };
         }
     }
 }
