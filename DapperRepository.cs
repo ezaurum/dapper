@@ -4,27 +4,11 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Reflection;
 using slf4net;
 
 namespace Dapper.Repository
-{ 
-    public class DapperRepository<T> : DapperRepository<T, long, long>
-    {
-        public DapperRepository(string connectionString, string tableName = null, string prefix = null, string suffix = null)
-            : base(connectionString, tableName, prefix, suffix)
-        {
-        }
-    }
-
-    public class DapperRepository<T, TK> : DapperRepository<T, TK, TK>
-    {
-        public DapperRepository(string connectionString, string tableName = null, string prefix = null, string suffix = null) : base(connectionString, tableName, prefix, suffix)
-        {
-        }
-    }
-
-    public class DapperRepository<T, TK, TFk> : IRepository<T, TK, TFk>
+{
+    public class DapperRepository<T, TK> : IRepository<T, TK>
     {
         protected readonly SqlConnection DB;
         protected ILogger Logger;
@@ -39,8 +23,8 @@ namespace Dapper.Repository
 
             //set table name 
             Dictionary<byte, string> queries;
-            AutoQueryMaker.GenerateQueries(typeof (T), out queries, tableName, prefix, suffix);
-            
+            AutoQueryMaker.GenerateQueries(typeof(T), out queries, tableName, prefix, suffix);
+
             TableName = queries[SqlQuerySnippet.TableNameIndex];
             InsertQuery = queries[SqlQuerySnippet.InsertIndex];
             SelectQuery = queries[SqlQuerySnippet.SelectIndex];
@@ -86,7 +70,7 @@ namespace Dapper.Repository
         #endregion
 
         #region READ
-        
+
         /// <summary>
         /// Read one row by one PK
         /// </summary>
@@ -103,20 +87,7 @@ namespace Dapper.Repository
                 Logger.Error(e1, "while auto data " + TableName);
                 return default(T);
             }
-        }
-
-        public IEnumerable<T> ReadByForeignKey(TFk id)
-        {
-            try
-            {
-                return DB.Query<T>(SelectByForeignKeyQuery, new { FK_ID = id });
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return null;
-            }
-        }
+        } 
 
         public IEnumerable<T> ReadBy(object condition)
         {
@@ -174,7 +145,7 @@ namespace Dapper.Repository
         }
 
         #endregion
-        
+
         #region DELETE
 
         /// <summary>
@@ -189,7 +160,7 @@ namespace Dapper.Repository
 
         public bool Delete(TK id, IDbTransaction tx)
         {
-            return 1 == tx.Connection.Execute(DeleteByIDQuery, new {PK_ID = id}, tx);
+            return 1 == tx.Connection.Execute(DeleteByIDQuery, new { PK_ID = id }, tx);
         }
 
         public bool Delete(object id, IDbTransaction tx)
@@ -204,7 +175,7 @@ namespace Dapper.Repository
 
         public virtual bool Delete(IEnumerable<TK> itemIDs)
         {
-            return itemIDs.Count() == DB.Execute(DeleteByIDQuery, itemIDs.Select(p=>new {ID=p}).ToArray());
+            return itemIDs.Count() == DB.Execute(DeleteByIDQuery, itemIDs.Select(p => new { ID = p }).ToArray());
         }
 
         public bool Delete(IEnumerable<T> items, IDbTransaction tx)
@@ -217,7 +188,7 @@ namespace Dapper.Repository
             return itemIDs.Count() == tx.Connection.Execute(DeleteByIDQuery, itemIDs.Select(p => new { ID = p }).ToArray(), tx);
         }
 
-    
+
 
         public bool Delete(object condition)
         {
@@ -225,7 +196,7 @@ namespace Dapper.Repository
         }
 
         #endregion
-        
+
         protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
         {
             try
@@ -263,7 +234,7 @@ namespace Dapper.Repository
         protected readonly string DeleteByQuery;
         protected readonly string DeleteByIDQuery;
 
-        protected readonly string TableName; 
+        protected readonly string TableName;
         #endregion
     }
 }

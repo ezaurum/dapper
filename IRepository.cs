@@ -8,8 +8,7 @@ namespace Dapper.Repository
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TK"></typeparam>
-    /// <typeparam name="TFK"></typeparam>
-    public interface IRepository<T, TK, in TFK>
+    public interface IRepository<T, in TK>
     {
         bool Create(T target);
         bool Create(T target, IDbTransaction tx);
@@ -17,7 +16,6 @@ namespace Dapper.Repository
         bool Create(IEnumerable<T> items, IDbTransaction tx);
 
         T Read(TK id);
-        IEnumerable<T> ReadByForeignKey(TFK id);
         IEnumerable<T> ReadBy(object condition);
 
         bool Update(T target);
