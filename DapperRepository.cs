@@ -1,24 +1,62 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
+using System.Data; 
 using System.Linq;
+using System.Reflection;
+using System.Security;
 using slf4net;
 
 namespace Dapper.Repository
 {
     public class DapperRepository<T, TK> : IRepository<T, TK>
     {
-        protected readonly SqlConnection DB;
+        protected readonly IDbConnection DB;
         protected ILogger Logger;
 
+        /// <exception cref="MemberAccessException">The class is abstract.-or- The constructor is a class initializer. </exception>
+        /// <exception cref="MethodAccessException">The constructor is private or protected, and the caller lacks <see cref="F:System.Security.Permissions.ReflectionPermissionFlag.MemberAccess" />. </exception>
+        /// <exception cref="TargetInvocationException">The invoked constructor throws an exception. </exception>
+        /// <exception cref="TargetParameterCountException">An incorrect number of parameters was passed. </exception>
+        /// <exception cref="SecurityException">The caller does not have the necessary code access permission.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="ProviderName"/> is <see langword="null" />.</exception> 
         public DapperRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null)
         {
             if (typeof(T).IsPrimitive) return;
 
-            DB = new SqlConnection(ConfigurationManager.ConnectionStrings[connectionString].ConnectionString);
+            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionString];
+
+            Type t;
+            try
+            {
+                t = Type.GetType(connectionStringSettings.ProviderName);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentNullException(connectionStringSettings.ProviderName + " is not properly loaded. ", e);
+            }
+
+            if (null == t)
+            {
+                throw new ArgumentNullException(connectionStringSettings.ProviderName + " is not exist.");
+            } 
+
+            var constructorInfos = t.GetConstructors().FirstOrDefault(c =>
+            {
+                ParameterInfo[] parameterInfos = c.GetParameters();
+                return parameterInfos.Length == 1 && parameterInfos[0].ParameterType == typeof(string);
+            });
+
+            if (constructorInfos != null)
+            {
+                DB = constructorInfos.Invoke(new[] {connectionStringSettings.ConnectionString}) as IDbConnection;
+            }
+            else
+            {
+                throw new ArgumentNullException(connectionStringSettings.ProviderName +" is not exist.");
+            }
+                
             Logger = LoggerFactory.GetLogger(GetType());
 
             //set table name 
