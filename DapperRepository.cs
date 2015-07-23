@@ -11,8 +11,9 @@ namespace Dapper.Repository
     public class DapperRepository<T, TK> : IRepository<T, TK>
     {
         protected readonly IDbConnection DB;
-        protected ILogger Logger; 
+        protected ILogger Logger;
 
+        /// <exception cref="ArgumentNullException"><paramref name=" is not properly loaded. "/> is <see langword="null" />.</exception>
         public DapperRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null)
         {
@@ -92,47 +93,23 @@ namespace Dapper.Repository
         /// <param name="id"></param>
         /// <returns></returns>
         public T Read(TK id)
-        {
-            try
-            {
-                return DB.Query<T>(SelectByIDQuery, new { PK_ID = id }).FirstOrDefault();
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return default(T);
-            }
+        { 
+            return DB.Query<T>(SelectByIDQuery, new { PK_ID = id }).FirstOrDefault();
         } 
 
         public IEnumerable<T> ReadBy(object condition)
         {
-            try
-            {
-                return DB.Query<T>(SelectByIDQuery, condition);
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return null;
-            }
+            return DB.Query<T>(SelectByIDQuery, condition);
         }
 
-        public virtual IEnumerable<T> ReadAllList()
+        public IEnumerable<T> ReadAll()
         {
-            return ReadAll(DB);
+            return DB.Query<T>(SelectQuery);
         }
 
         public IEnumerable<T> ReadAll(IDbConnection db)
-        {
-            try
-            {
-                return db.Query<T>(SelectQuery);
-            }
-            catch (Exception e1)
-            {
-                Logger.Error(e1, "while auto data " + TableName);
-                return null;
-            }
+        { 
+            return db.Query<T>(SelectQuery);
         }
 
         #endregion
@@ -212,29 +189,22 @@ namespace Dapper.Repository
 
         #endregion
 
+        /// <exception cref="Exception">A delegate callback throws an exception.</exception>
         protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
         {
-            try
+            DB.Open();
+            using (var tx = DB.BeginTransaction())
             {
-                DB.Open();
-                using (IDbTransaction tx = DB.BeginTransaction())
+                if (!action(tx))
                 {
-                    if (!action(tx))
-                    {
-                        tx.Rollback();
-                        DB.Close();
-                        return false;
-                    }
-                    tx.Commit();
+                    tx.Rollback();
+                    DB.Close();
+                    return false;
                 }
-                DB.Close();
-                return true;
+                tx.Commit();
             }
-            catch (Exception e)
-            {
-                //
-                return false;
-            }
+            DB.Close();
+            return true;
         }
 
         #region auto generated query snippets
