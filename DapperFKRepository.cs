@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic; 
+using System.Collections.Generic;
+using System.Data;
 
 namespace Dapper.Repository
 {
@@ -18,7 +19,8 @@ namespace Dapper.Repository
             }
         }
 
-        public DapperFKRepository(string connectionString, string tableName = null, string prefix = null, string suffix = null) : base(connectionString, tableName, prefix, suffix)
+        public DapperFKRepository(IDbConnection connection, string tableName = null, string prefix = null, string suffix = null)
+            : base(connection, tableName, prefix, suffix)
         {
         }
     }

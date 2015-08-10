@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data; 
 using System.Linq;
-using System.Reflection;
 using slf4net;
 
 namespace Dapper.Repository
@@ -13,29 +11,12 @@ namespace Dapper.Repository
         protected readonly IDbConnection DB;
         protected ILogger Logger;
 
-        /// <exception cref="ArgumentNullException"><paramref name=" is not properly loaded. "/> is <see langword="null" />.</exception>
-        public DapperRepository(string connectionString, string tableName = null, string prefix = null,
-            string suffix = null)
+        public DapperRepository(IDbConnection connection, string tableName = null, string prefix = null, string suffix = null)
         {
             if (typeof(T).IsPrimitive) return;
 
             Logger = LoggerFactory.GetLogger(GetType());
-
-            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionString];
-
-            try
-            {
-                string providerName = connectionStringSettings.ProviderName;
-                string assemblyName = providerName.Substring(0, providerName.LastIndexOf(".", StringComparison.Ordinal));
-                DB =
-                    (IDbConnection)
-                        Activator.CreateInstance(assemblyName, providerName, false, BindingFlags.Default,null, 
-                            new[] {connectionStringSettings.ConnectionString}, null, null).Unwrap();
-            }
-            catch (Exception e)
-            {
-                throw new ArgumentNullException(" is not properly loaded. ", e);
-            }
+            DB = connection;
 
             //set table name 
             Dictionary<byte, string> queries;
