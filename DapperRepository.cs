@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data; 
+using System.Configuration;
+using System.Data;
 using System.Linq;
+using System.Reflection;
 using slf4net;
 
 namespace Dapper.Repository
@@ -9,18 +11,44 @@ namespace Dapper.Repository
     public class DapperRepository<T, TK> : IRepository<T, TK>
     {
         protected readonly IDbConnection DB;
-        protected ILogger Logger;
+        protected readonly ILogger Logger;
 
-        public DapperRepository(IDbConnection connection, string tableName = null, string prefix = null, string suffix = null)
+        public DapperRepository(IDbConnection connection, string tableName = null, string prefix = null,
+            string suffix = null)
+            : this(tableName, prefix, suffix)
         {
-            if (typeof(T).IsPrimitive) return;
+            if (typeof (T).IsPrimitive) return;
 
-            Logger = LoggerFactory.GetLogger(GetType());
             DB = connection;
+        }
 
+        /// <exception cref="ArgumentNullException"><paramref name=" is not properly loaded. " /> is <see langword="null" />.</exception>
+        public DapperRepository(string connectionString, string tableName = null, string prefix = null,
+            string suffix = null)
+            : this(tableName, prefix, suffix)
+        {
+            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionString];
+
+            try
+            {
+                var providerName = connectionStringSettings.ProviderName;
+                var assemblyName = providerName.Substring(0, providerName.LastIndexOf(".", StringComparison.Ordinal));
+                DB =
+                    (IDbConnection)
+                        Activator.CreateInstance(assemblyName, providerName, false, BindingFlags.Default, null,
+                            new[] {connectionStringSettings.ConnectionString}, null, null).Unwrap();
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentNullException(" is not properly loaded. ", e);
+            }
+        }
+
+        private DapperRepository(string tableName, string prefix, string suffix)
+        {
             //set table name 
             Dictionary<byte, string> queries;
-            AutoQueryMaker.GenerateQueries(typeof(T), out queries, tableName, prefix, suffix);
+            AutoQueryMaker.GenerateQueries(typeof (T), out queries, tableName, prefix, suffix);
 
             TableName = queries[SqlQuerySnippet.TableNameIndex];
             InsertQuery = queries[SqlQuerySnippet.InsertIndex];
@@ -33,11 +61,32 @@ namespace Dapper.Repository
             DeleteByQuery = queries[SqlQuerySnippet.DeleteIndex];
             DeleteByIDQuery = queries[SqlQuerySnippet.DeletePKIndex];
 
-            Logger.Info(InsertQuery);
-            Logger.Info(SelectQuery);
-            Logger.Info(SelectByIDQuery);
-            Logger.Info(DeleteByIDQuery);
-            Logger.Info(UpdateByIDQuery);
+            Logger = LoggerFactory.GetLogger(GetType());
+
+            if (!Logger.IsDebugEnabled) return;
+            Logger.Debug(InsertQuery);
+            Logger.Debug(SelectQuery);
+            Logger.Debug(SelectByIDQuery);
+            Logger.Debug(DeleteByIDQuery);
+            Logger.Debug(UpdateByIDQuery);
+        }
+
+        /// <exception cref="Exception">A delegate callback throws an exception.</exception>
+        protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
+        {
+            DB.Open();
+            using (var tx = DB.BeginTransaction())
+            {
+                if (!action(tx))
+                {
+                    tx.Rollback();
+                    DB.Close();
+                    return false;
+                }
+                tx.Commit();
+            }
+            DB.Close();
+            return true;
         }
 
         #region CREATE
@@ -58,7 +107,10 @@ namespace Dapper.Repository
             return targets.Count() == DB.Execute(InsertQuery, targets);
         }
 
-        /// <exception cref="OverflowException">The number of elements in <paramref name="source" /> is larger than <see cref="F:System.Int32.MaxValue" />.</exception>
+        /// <exception cref="OverflowException">
+        ///     The number of elements in <paramref name="source" /> is larger than
+        ///     <see cref="F:System.Int32.MaxValue" />.
+        /// </exception>
         public virtual bool Create(IEnumerable<T> items, IDbTransaction tx)
         {
             return items.Count() == DB.Execute(InsertQuery, items, tx);
@@ -69,14 +121,14 @@ namespace Dapper.Repository
         #region READ
 
         /// <summary>
-        /// Read one row by one PK
+        ///     Read one row by one PK
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
         public T Read(TK id)
-        { 
-            return DB.Query<T>(SelectByIDQuery, new { PK_ID = id }).FirstOrDefault();
-        } 
+        {
+            return DB.Query<T>(SelectByIDQuery, new {PK_ID = id}).FirstOrDefault();
+        }
 
         public IEnumerable<T> ReadBy(object condition)
         {
@@ -89,7 +141,7 @@ namespace Dapper.Repository
         }
 
         public IEnumerable<T> ReadAll(IDbConnection db)
-        { 
+        {
             return db.Query<T>(SelectQuery);
         }
 
@@ -122,18 +174,18 @@ namespace Dapper.Repository
         #region DELETE
 
         /// <summary>
-        /// Delete row by one PK
+        ///     Delete row by one PK
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
         public bool Delete(TK id)
         {
-            return 0 < DB.Execute(DeleteByIDQuery, new { PK_ID = id });
+            return 0 < DB.Execute(DeleteByIDQuery, new {PK_ID = id});
         }
 
         public bool Delete(TK id, IDbTransaction tx)
         {
-            return 1 == tx.Connection.Execute(DeleteByIDQuery, new { PK_ID = id }, tx);
+            return 1 == tx.Connection.Execute(DeleteByIDQuery, new {PK_ID = id}, tx);
         }
 
         public bool Delete(object id, IDbTransaction tx)
@@ -148,7 +200,7 @@ namespace Dapper.Repository
 
         public virtual bool Delete(IEnumerable<TK> itemIDs)
         {
-            return itemIDs.Count() == DB.Execute(DeleteByIDQuery, itemIDs.Select(p => new { ID = p }).ToArray());
+            return itemIDs.Count() == DB.Execute(DeleteByIDQuery, itemIDs.Select(p => new {ID = p}).ToArray());
         }
 
         public bool Delete(IEnumerable<T> items, IDbTransaction tx)
@@ -158,9 +210,9 @@ namespace Dapper.Repository
 
         public bool Delete(IEnumerable<TK> itemIDs, IDbTransaction tx)
         {
-            return itemIDs.Count() == tx.Connection.Execute(DeleteByIDQuery, itemIDs.Select(p => new { ID = p }).ToArray(), tx);
+            return itemIDs.Count() ==
+                   tx.Connection.Execute(DeleteByIDQuery, itemIDs.Select(p => new {ID = p}).ToArray(), tx);
         }
-
 
 
         public bool Delete(object condition)
@@ -169,24 +221,6 @@ namespace Dapper.Repository
         }
 
         #endregion
-
-        /// <exception cref="Exception">A delegate callback throws an exception.</exception>
-        protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
-        {
-            DB.Open();
-            using (var tx = DB.BeginTransaction())
-            {
-                if (!action(tx))
-                {
-                    tx.Rollback();
-                    DB.Close();
-                    return false;
-                }
-                tx.Commit();
-            }
-            DB.Close();
-            return true;
-        }
 
         #region auto generated query snippets
 
@@ -201,6 +235,7 @@ namespace Dapper.Repository
         protected readonly string DeleteByIDQuery;
 
         protected readonly string TableName;
+
         #endregion
     }
 }
