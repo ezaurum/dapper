@@ -3,45 +3,22 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
-using System.Reflection;
+using Npgsql;
 using slf4net;
 
 namespace Dapper.Repository
 {
     public class DapperRepository<T, TK> : IRepository<T, TK>
     {
-        protected readonly IDbConnection DB;
+        public string ConnectionString { get; set; }
         protected readonly ILogger Logger;
-
-        public DapperRepository(IDbConnection connection, string tableName = null, string prefix = null,
-            string suffix = null)
-            : this(tableName, prefix, suffix)
-        {
-            if (typeof (T).IsPrimitive) return;
-
-            DB = connection;
-        }
 
         /// <exception cref="ArgumentNullException"><paramref name=" is not properly loaded. " /> is <see langword="null" />.</exception>
         public DapperRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null)
             : this(tableName, prefix, suffix)
         {
-            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionString];
-
-            try
-            {
-                var providerName = connectionStringSettings.ProviderName;
-                var assemblyName = providerName.Substring(0, providerName.LastIndexOf(".", StringComparison.Ordinal));
-                DB =
-                    (IDbConnection)
-                        Activator.CreateInstance(assemblyName, providerName, false, BindingFlags.Default, null,
-                            new[] {connectionStringSettings.ConnectionString}, null, null).Unwrap();
-            }
-            catch (Exception e)
-            {
-                throw new ArgumentNullException(" is not properly loaded. ", e);
-            }
+            ConnectionString = ConfigurationManager.ConnectionStrings[connectionString].ConnectionString;
         }
 
         private DapperRepository(string tableName, string prefix, string suffix)
@@ -74,19 +51,21 @@ namespace Dapper.Repository
         /// <exception cref="Exception">A delegate callback throws an exception.</exception>
         protected bool ExecuteTransaction(Func<IDbTransaction, bool> action)
         {
-            DB.Open();
-            using (var tx = DB.BeginTransaction())
+            using (var conn = new NpgsqlConnection(ConnectionString))
             {
-                if (!action(tx))
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
                 {
-                    tx.Rollback();
-                    DB.Close();
-                    return false;
+                    if (!action(tx))
+                    {
+                        tx.Rollback();
+                        return false;
+                    }
+                    tx.Commit();
                 }
-                tx.Commit();
+                return true;
             }
-            DB.Close();
-            return true;
+            
         }
 
         #region CREATE
@@ -98,13 +77,15 @@ namespace Dapper.Repository
 
         public virtual bool Create(T target)
         {
-            return 1 == DB.Execute(InsertQuery, target);
+            using (var conn = new NpgsqlConnection(ConnectionString)) 
+            {return 1 == conn.Execute(InsertQuery, target);}
         }
 
         /// <exception cref="ArgumentNullException"><paramref name="source" /> is null.</exception>
         public virtual bool Create(IEnumerable<T> targets)
         {
-            return targets.Count() == DB.Execute(InsertQuery, targets);
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {return targets.Count() == conn.Execute(InsertQuery, targets);}
         }
 
         /// <exception cref="OverflowException">
@@ -113,7 +94,8 @@ namespace Dapper.Repository
         /// </exception>
         public virtual bool Create(IEnumerable<T> items, IDbTransaction tx)
         {
-            return items.Count() == DB.Execute(InsertQuery, items, tx);
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {return items.Count() == conn.Execute(InsertQuery, items, tx);}
         }
 
         #endregion
@@ -127,17 +109,26 @@ namespace Dapper.Repository
         /// <returns></returns>
         public T Read(TK id)
         {
-            return DB.Query<T>(SelectByIDQuery, new {PK_ID = id}).FirstOrDefault();
+            using (var con = new NpgsqlConnection(ConnectionString))
+            {
+                return con.Query<T>(SelectByIDQuery, new { PK_ID = id }).FirstOrDefault();
+            }
         }
 
         public IEnumerable<T> ReadBy(object condition)
         {
-            return DB.Query<T>(SelectByIDQuery, condition);
+            using (var con = new NpgsqlConnection(ConnectionString))
+            {
+                return con.Query<T>(SelectByIDQuery, condition);
+            }
         }
 
         public IEnumerable<T> ReadAll()
         {
-            return DB.Query<T>(SelectQuery);
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {
+                return conn.Query<T>(SelectQuery);
+            } 
         }
 
         public IEnumerable<T> ReadAll(IDbConnection db)
@@ -151,7 +142,10 @@ namespace Dapper.Repository
 
         public virtual bool Update(IEnumerable<T> targets)
         {
-            return targets.Count() == DB.Execute(UpdateByIDQuery, targets);
+            using (var con = new NpgsqlConnection(ConnectionString))
+            {
+                return targets.Count() == con.Execute(UpdateByIDQuery, targets);
+            }
         }
 
         public bool Update(IEnumerable<T> items, IDbTransaction tx)
@@ -166,7 +160,10 @@ namespace Dapper.Repository
 
         public virtual bool Update(T target)
         {
-            return 1 == DB.Execute(UpdateByIDQuery, target);
+            using (var con = new NpgsqlConnection(ConnectionString))
+            {
+                return 1 == con.Execute(UpdateByIDQuery, target);
+            }
         }
 
         #endregion
@@ -180,8 +177,10 @@ namespace Dapper.Repository
         /// <returns></returns>
         public bool Delete(TK id)
         {
-            return 0 < DB.Execute(DeleteByIDQuery, new {PK_ID = id});
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {return 0 < conn.Execute(DeleteByIDQuery, new {PK_ID = id});}
         }
+      
 
         public bool Delete(TK id, IDbTransaction tx)
         {
@@ -195,12 +194,12 @@ namespace Dapper.Repository
 
         public virtual bool Delete(IEnumerable<T> targets)
         {
-            return targets.Count() == DB.Execute(DeleteByIDQuery, targets);
+            using (var conn = new NpgsqlConnection(ConnectionString)) {return targets.Count() == conn.Execute(DeleteByIDQuery, targets);}
         }
 
         public virtual bool Delete(IEnumerable<TK> itemIDs)
         {
-            return itemIDs.Count() == DB.Execute(DeleteByIDQuery, itemIDs.Select(p => new {ID = p}).ToArray());
+            using (var conn = new NpgsqlConnection(ConnectionString)) {return itemIDs.Count() == conn.Execute(DeleteByIDQuery, itemIDs.Select(p => new { ID = p }).ToArray());}
         }
 
         public bool Delete(IEnumerable<T> items, IDbTransaction tx)
@@ -214,10 +213,18 @@ namespace Dapper.Repository
                    tx.Connection.Execute(DeleteByIDQuery, itemIDs.Select(p => new {ID = p}).ToArray(), tx);
         }
 
-
-        public bool Delete(object condition)
+        public bool DeleteBy(object condition)
         {
-            return 0 < DB.Execute(DeleteByIDQuery, condition);
+
+            using (var conn = new NpgsqlConnection(ConnectionString)) {return 0 < conn.Execute(DeleteByIDQuery, condition);}
+        }
+
+        public bool DeleteBy(string where, object condition)
+        {
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {
+                return 0 < conn.Execute(string.Format(DeleteByQuery , where), condition);
+            }
         }
 
         #endregion

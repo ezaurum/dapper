@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
+using Npgsql;
 
 namespace Dapper.Repository
 {
     public class DapperFKRepository<T, TK, TFk> : DapperRepository<T, TK>, IFKRepository<T, TK, TFk>
     {
-        public DapperFKRepository(IDbConnection connection, string tableName = null, string prefix = null,
-            string suffix = null)
-            : base(connection, tableName, prefix, suffix)
-        {
-        }
-
         public DapperFKRepository(string connectionString, string tableName = null, string prefix = null,
             string suffix = null) : base(connectionString, tableName, prefix, suffix)
         {
@@ -21,7 +15,7 @@ namespace Dapper.Repository
         {
             try
             {
-                return DB.Query<T>(SelectByForeignKeyQuery, new {FK_ID = id});
+                using (var conn = new NpgsqlConnection(ConnectionString)) { return conn.Query<T>(SelectByForeignKeyQuery, new { FK_ID = id }); }
             }
             catch (Exception e1)
             {

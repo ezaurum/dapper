@@ -29,5 +29,7 @@ namespace Dapper.Repository
         bool Delete(IEnumerable<TK> itemIDs);
         bool Delete(IEnumerable<T> items, IDbTransaction tx);
         bool Delete(IEnumerable<TK> itemIDs, IDbTransaction tx);
+        bool DeleteBy(object condition);
+        bool DeleteBy(string where, object condition);
     }
 }
